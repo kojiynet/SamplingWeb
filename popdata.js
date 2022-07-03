@@ -39,6 +39,16 @@ class Person {
 
 };
 
+class Result {
+
+    constructor( ssize0, smean0)
+    {
+        this.ssize = ssize0; // sample size
+        this.smean = smean0; // sample mean
+    }
+
+};
+
 
 const popPeopleCsv = `
 name,score,id,gender_str,qaclass_str
@@ -96,6 +106,7 @@ name,score,id,gender_str,qaclass_str
 
 let popPersons = [];
 let sample = []; // これはインデックスの列になる。
+let resultVec = []; // Resultのリスト
 let ncol = 5; // 表にするときの列数。
 
 function preparePopData()
@@ -289,6 +300,7 @@ function getSampleTable( ssize)
 }
 
 // サンプルの点数の平均値を返す。
+// 同時に、resultVecに結果を追加する。
 function getSampleScoreMean()
 {
 
@@ -296,7 +308,13 @@ function getSampleScoreMean()
     for ( const idx of sample){
         sum += popPersons[ idx].score;
     }
-    return ( sum / sample.length);
+    
+    let ssize = sample.length;
+    let smean = sum / ssize;
+
+    resultVec.push( new Result( ssize, smean));
+
+    return smean;
 
 }
 
