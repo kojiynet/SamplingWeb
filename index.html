@@ -1,7 +1,9 @@
 ﻿
 <!--
 TODO
-オートモードを追加。標本サイズ1～50を1回ずつ繰り返す。止めるボタンをつくる。速さを調整できる。
+クリアボタンをつくる。
+自動モードと手動モードのセレクタとなるラジオボタン？
+サンプリングの際にランダムネスをルーレットで表示。
 -->
 
 <!DOCTYPE html>
@@ -10,21 +12,22 @@ TODO
   <meta charset="UTF-8">
   <title>サンプリング</title>
   <style>
-      /*
+
       div {
+        font-size: 14px;
+        /*
         margin: 5px;
+        */
       }
-      */
 
       /* for population table */
       .pop-table {
-        width: 100%;
         table-layout: fixed;
         background: #ddd;
       }
 
       .pop-table td {
-        width: auto;
+        width: 60px; /* 5列並べるとgridの幅にぴったり */
         background: #ccc;
       }
 
@@ -40,7 +43,7 @@ TODO
       .main-container {
         display: grid;
         gap: 10px;
-        grid-template-columns: 320px 320px 450px; 
+        grid-template-columns: 322px 322px 450px; 
         grid-template-rows: auto auto;
       }
 
@@ -95,14 +98,23 @@ TODO
 
     <div class="box-top">
       <div>サンプリングをします。</div>
-      <button id = "preparePop">母集団を準備</button>
-      <button id = "draw" disabled>標本を選ぶ、そしてグラフに点を描く</button>
       <div>
+        <label>自動モード用→</label>
+        <button id = "autoModeStart">自動モードで開始</button>
+        <button id = "autoModeStop" disabled>中止</button>
+        <label for = "speedInput">速さ</label>
+        <input type = "range" id = "speedInput" name = "speedInput" min = "0" max = "10">
+        <span id = "speedDesc"></span>
+      </div>
+      <div>
+        <label>手動モード用→</label>
+        <button id = "preparePop">母集団を準備</button>
+        <button id = "drawButton" disabled>標本を選ぶ、そしてグラフに点を描く</button>
         <label for = "ssizeInput">標本サイズ</label>
         <input type = "range" id = "ssizeInput" name = "ssizeInput" min = "1" max = "50">
         <span id = "ssizeDesc"></span>
       </div>
-      <p id = "debugPara"></p>
+      <div id = "msg"></div>
     </div>
 
     <div class="box-left">
@@ -125,8 +137,14 @@ TODO
 </body>
 
 <script>
+  let autoModeStartButton = document.getElementById( "autoModeStart");
+  let autoModeStopButton = document.getElementById( "autoModeStop");
+
   let preparePopButton = document.getElementById( "preparePop");
-  let drawButton = document.getElementById( "draw");
+  let drawButton = document.getElementById( "drawButton");
+
+  let speedInput = document.getElementById( "speedInput");
+  let speedDesc = document.getElementById( "speedDesc");
 
   let popDesc = document.getElementById( "popDesc");
   let popTable = document.getElementById( "popTable");
@@ -138,63 +156,166 @@ TODO
 
   let canvId = document.getElementById( "canv");
 
-  // テスト用
-  let debugPara = document.getElementById( "debugPara");
+  let msg = document.getElementById( "msg");
+
 </script>
-<script src = "popdata.js"></script>
+<script src = "datahandle.js"></script>
 <script src = "graph.js"></script>
 <script>
 
   // 初期処理
+  speedInput.value = 0;
+  speedDesc.textContent = String( speedInput.value);
   ssizeInput.value = 5;
-  ssizeDesc.textContent = ssizeInput.value;
-  drawButton.disabled = true;
-  //  drawFirst();
+  ssizeDesc.textContent = String( ssizeInput.value);
   graphObj.clear();
-  graphObj.drawBackground();
-  
+  graphObj.drawBackground();  
 
   ssizeInput.addEventListener(
     "change",
     () => {
-      ssizeDesc.textContent = ssizeInput.value;
+      ssizeDesc.textContent = String( ssizeInput.value);
     }
   );
+
+  function preparePop()
+  {
+    readPopData();
+    popTable.innerHTML = getPopTable();
+    popDesc.innerHTML = "母集団データを読み込みました。<br>点数の平均値は " + getPopScoreMean() +" です。";
+    drawButton.disabled = false;
+  }
 
   preparePopButton.addEventListener(
-    "click",
-    () => {
-
-      preparePopData();
-
-      popTable.innerHTML = getPopTable();
-
-      popDesc.innerHTML = "母集団データを読み込みました。<br>点数の平均値は " + getPopScoreMean() +" です。";
-
-      drawButton.disabled = false;
-      
-    }
+    "click", preparePop
   );
+
+  // sleep for dur millisec
+  // use like "await sleep( 1000);" in "async" function
+  function sleep( dur) {
+    return new Promise(
+      ( resolve) => {
+        setTimeout( resolve, dur);
+      } 
+    );
+  }
+
+  function drawSampleOfSize( ssize0)
+  {
+
+    if ( popPersons.length < 1){
+      msg.innerHTML = "まず母集団を読み込んでください。";
+      return;
+    }
+
+    // 標本サイズがスライダーと異なっている場合に、スライダーの方を合わせる。
+    ssizeInput.value = ssize0;
+    ssizeDesc.textContent = ssizeInput.value;
+
+    sampleTable.innerHTML = getSampleTable( ssize0);
+    sampleDesc.innerHTML = "標本を選びました。<br>点数の平均値は " + ( getSampleScoreMean().toFixed( 2)) +" です。";
+    graphObj.redrawGraph();
+
+  }
+
+  function drawSample()
+  {
+    drawSampleOfSize( ssizeInput.value);
+  }
 
   drawButton.addEventListener(
+    "click", drawSample
+  );
+
+
+  let interval = 50 * ( 10 - speedInput.value);
+  let stopped = false;
+  async function autoModeStart()
+  {
+
+    msg.innerHTML = "自動モードでスタートしました。ストップするには中止ボタンを押してください。";
+
+    stopped = false;
+    
+    // 以前の結果を消去
+    resultVec = [];
+    graphObj.clear();
+
+    preparePop();
+
+    // 手動モードのGUI部品の有効／無効
+    preparePopButton.disabled = true;
+    drawButton.disabled = true;
+    ssizeInput.disabled = true;
+
+    // 自動モードのGUI部品の有効／無効
+    autoModeStopButton.disabled = false;
+
+    let ndraw = 10;
+    let popSize = popPersons.length;
+    for ( let i = 0; i < ndraw; ++i){
+
+      msg.innerHTML = "ただいま" + String( i + 1) + "回目のサンプリング中...";
+
+      for ( let ss0 = 1; ss0 <= popSize; ++ss0){
+        await sleep( interval);
+        if ( stopped == true){
+          break;
+        }
+        drawSampleOfSize( ss0);
+      }
+
+      if ( stopped == true){
+          break;
+      }
+
+    }
+
+    // 手動モードのGUI部品の有効／無効
+    preparePopButton.disabled = false;
+    drawButton.disabled = false;
+    ssizeInput.disabled = false;
+
+    // 自動モードのGUI部品の有効／無効
+    autoModeStopButton.disabled = true;
+
+    if ( stopped == false){
+      msg.innerHTML = "自動モードが終了しました。";
+    }
+
+  }
+
+  autoModeStartButton.addEventListener(
+    "click", autoModeStart
+  );
+
+  autoModeStopButton.addEventListener(
     "click",
     () => {
 
-      if ( popPersons.length < 1){
-        debugPara.innerHTML = "まず母集団を読み込んでください。";
-        return;
-      }
+      stopped = true;
 
-      sampleTable.innerHTML = getSampleTable( ssizeInput.value);
+      // 手動モードのGUI部品の有効／無効
+      preparePopButton.disabled = false;
+      drawButton.disabled = false; 
+      ssizeInput.disabled = false; 
+          
+      // 自動モードのGUI部品の有効／無効
+      autoModeStopButton.disabled = true;
+      speedInput.disabled = false; 
 
-      sampleDesc.innerHTML = "標本を選びました。<br>点数の平均値は " + ( getSampleScoreMean().toFixed( 2)) +" です。";
+      msg.innerHTML = "中止しました。";
 
-      graphObj.redrawGraph();
- 
     }
-
   );
 
+  speedInput.addEventListener(
+    "change",
+    () => {
+      speedDesc.textContent = String( speedInput.value);
+      interval = 50 * ( 10 - speedInput.value);
+    }
+  );
 
 
 </script>

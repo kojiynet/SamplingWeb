@@ -109,7 +109,7 @@ let sample = []; // これはインデックスの列になる。
 let resultVec = []; // Resultのリスト
 let ncol = 5; // 表にするときの列数。
 
-function preparePopData()
+function readPopData()
 {
 
     // 修正用
