@@ -47,7 +47,6 @@ class CanvTrans {
 
 };
 
-// let ct = new CanvTrans();
 
 class GraphType {
 

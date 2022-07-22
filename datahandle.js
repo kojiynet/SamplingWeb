@@ -1,5 +1,33 @@
 ﻿'use strict'
 
+/*
+
+datahandle.js
+
+Defined in this file...
+
+Classes:
+    Person
+    Result
+
+Global Variables:
+    popPersons
+    sample
+    resultVec
+    ncol
+
+Functions:
+    readPopData()
+    getPopTable()
+    getPopScoreMean()
+    getDiscreteUniformRandom( lower, upper)
+    getSampleIntSeqWOR( lower, upper, samplelen)
+    getSampleTable( ssize)
+    getSampleScoreMean()
+
+*/
+
+
 class Person {
 
     constructor()
@@ -13,6 +41,7 @@ class Person {
         this.id = -1;
     }
 
+    // 文字列フィールドに代入すると同時に、数値フィールドにもパースして格納する。
     setStrFields( name0, score0, id0, gender0, qa0)
     {
         this.name = name0;
@@ -39,6 +68,7 @@ class Person {
 
 };
 
+// 抽出時の結果
 class Result {
 
     constructor( ssize0, smean0)
@@ -49,70 +79,23 @@ class Result {
 
 };
 
-
-const popPeopleCsv = `
-name,score,id,gender_str,qaclass_str
-めい,65,1,女性,未履修
-えま,67,2,女性,未履修
-ゆい,72,3,女性,未履修
-みお,76,4,女性,履修済
-あおい,69,5,女性,履修済
-ひまり,62,6,女性,未履修
-つむぎ,56,7,女性,未履修
-あかり,70,8,女性,履修済
-ほのか,70,9,女性,履修済
-いちか,68,10,女性,履修済
-こはる,65,11,女性,未履修
-さな,60,12,女性,未履修
-りお,74,13,女性,履修済
-はな,63,14,女性,履修済
-りこ,73,15,女性,履修済
-さら,73,16,女性,未履修
-ひな,75,17,女性,履修済
-さくら,76,18,女性,履修済
-いろは,52,19,女性,未履修
-りん,64,20,女性,未履修
-ゆあ,75,21,女性,履修済
-ゆな,50,22,女性,未履修
-ひなた,40,23,女性,未履修
-ゆづき,45,24,女性,未履修
-みゆ,58,25,女性,履修済
-はると,67,26,男性,未履修
-そうた,58,27,男性,未履修
-はるき,65,28,男性,履修済
-みなと,80,29,男性,未履修
-りく,55,30,男性,履修済
-あおと,67,31,男性,未履修
-ゆうと,73,32,男性,履修済
-あおい,76,33,男性,履修済
-いつき,59,34,男性,未履修
-ひなた,52,35,男性,未履修
-そうま,54,36,男性,未履修
-こうき,49,37,男性,未履修
-そうすけ,47,38,男性,未履修
-はる,67,39,男性,未履修
-かいと,72,40,男性,履修済
-そら,78,41,男性,履修済
-あさひ,60,42,男性,未履修
-かなた,68,43,男性,履修済
-はやと,76,44,男性,履修済
-ゆうせい,65,45,男性,履修済
-れん,68,46,男性,履修済
-あやと,68,47,男性,履修済
-えいと,60,48,男性,未履修
-りくと,66,49,男性,履修済
-ゆうま,68,50,男性,履修済
-`
-
+// 母集団のリスト
 let popPersons = [];
-let sample = []; // これはインデックスの列になる。
-let resultVec = []; // Resultのリスト
-let ncol = 5; // 表にするときの列数。
 
+// 標本。これはpopPersonsのインデックスの列になる。
+let sample = []; 
+
+// Resultのリスト
+let resultVec = []; 
+
+// 表にするときの列数。
+let ncol = 5; 
+
+// 母集団データをPerson型のリストpopPersonsに格納する。
 function readPopData()
 {
 
-    // 修正用
+    // 修正用変数に代入
     let popPeopleCsvMod = popPeopleCsv;
 
     // 改行コード3種類に対応
@@ -120,10 +103,8 @@ function readPopData()
     popPeopleCsvMod = popPeopleCsvMod.replace( "\n\n", "\n")
 
     let rawlines = popPeopleCsvMod.split( "\n")
-    for ( let l in rawlines){
-        l.replace( "\r", "")
-    }
 
+    // 空行以外をlinesに格納
     let lines = [];
     for ( let i = 0; i < rawlines.length; ++i){
         let l = rawlines[ i];
@@ -132,16 +113,19 @@ function readPopData()
         }
     }
 
-    let rowTokens = []; // 行メジャーでトークンを入れる。
+    // 行メジャーでトークンを入れる。
+    let rowTokens = []; 
     for ( let i = 0; i < lines.length; ++i){
         let tokens = lines[ i].split( ",");
         rowTokens.push( tokens);
     }
-    // 各行のトークンの数が一致しているか確認していない。
+    // 各行のトークンの数が一致しているかは確認していない。
 
-    let varNames = rowTokens[ 0]; // 変数名のリスト
+    // 変数名のリスト（＝1行目のトークンたち）
+    let varNames = rowTokens[ 0];
 
-    let colTokens = []; // 列メジャーでトークンを入れる。変数名は入れない。
+    // 列メジャーでトークンを入れる。変数名は入れない。
+    let colTokens = []; 
     for ( let i = 0; i < varNames.length; ++i){
         let strs = []
         for ( let j = 1; j < rowTokens.length; ++j){
@@ -150,6 +134,7 @@ function readPopData()
         colTokens.push( strs);
     }
 
+    // varNames[ idx]がそれぞれ何に対応しているかを識別する。
     let indexOfName = -1;
     let indexOfScore = -1;
     let indexOfId = -1;
@@ -192,7 +177,7 @@ function getPopTable()
 {
 
     let colCount = 1;
-    var ret = "";
+    let ret = "";
 
     for ( let i = 0; i < popPersons.length; ++i){
 
@@ -202,8 +187,8 @@ function getPopTable()
 
         ret +=
             "<td>" +
-            '<div class = "pop-table-name">' + popPersons[ i].name + "</div>" + 
-            '<div class = "pop-table-score">' + popPersons[ i].score_str + "点</div>" +
+            '<div class = "table-name">' + popPersons[ i].name + "</div>" + 
+            '<div class = "table-score">' + popPersons[ i].score_str + "点</div>" +
             "</td>"
         ;
         
@@ -231,12 +216,12 @@ function getPopScoreMean()
 
 }
 
-// [lower, upper]の範囲の離散型一様分布の乱数を得る。
+// [lower, upper]の範囲の離散型（整数）一様分布の乱数を得る。
 // lowerとupperは整数だと仮定。
 function getDiscreteUniformRandom( lower, upper)
 {
 
-    // This gives floar ranging [0, 1) 
+    // This gives float ranging [0, 1) 
     let ran = Math.random();
 
     let ret = Math.floor( ran * ( upper - lower + 1) + lower);
@@ -281,8 +266,8 @@ function getSampleTable( ssize)
         let idx = sample[ i];
         ret +=
             "<td>" +
-            '<div class = "pop-table-name">' + popPersons[ idx].name + "</div>" + 
-            '<div class = "pop-table-score">' + popPersons[ idx].score_str + "点</div>" +
+            '<div class = "table-name">' + popPersons[ idx].name + "</div>" + 
+            '<div class = "table-score">' + popPersons[ idx].score_str + "点</div>" +
             "</td>"
         ;
         

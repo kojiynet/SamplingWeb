@@ -1,7 +1,9 @@
 ﻿
 <!--
-TODO
-クリアボタンをつくる。
+On-Browser Sampler
+Copyriht (C) 2022 Koji Yamamoto 
+TODO:
+グラフの目盛線の間隔を汎用のアルゴリズムに。
 自動モードと手動モードのセレクタとなるラジオボタン？
 サンプリングの際にランダムネスをルーレットで表示。
 -->
@@ -10,32 +12,40 @@ TODO
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>サンプリング</title>
+  <title>On-Browser Sampling Simulator</title>
   <style>
 
+      button {
+        font-size: 12px;
+      }
+
       div {
-        font-size: 14px;
+        font-size: 12px;
         /*
         margin: 5px;
         */
       }
 
+      .footer {
+        font-size: 8px;
+      }
+
       /* for population table */
-      .pop-table {
+      .persons-table {
         table-layout: fixed;
         background: #ddd;
       }
 
-      .pop-table td {
+      .persons-table td {
         width: 60px; /* 5列並べるとgridの幅にぴったり */
         background: #ccc;
       }
 
-      .pop-table-name {
+      .table-name {
         font-size: 11px;
       }
 
-      .pop-table-score {
+      .table-score {
         font-size: 11px;
       }
 
@@ -97,51 +107,70 @@ TODO
   <div class="main-container">
 
     <div class="box-top">
-      <div>サンプリングをします。</div>
+
+      <div id = "msg"></div>
+
       <div>
-        <label>自動モード用→</label>
-        <button id = "autoModeStart">自動モードで開始</button>
-        <button id = "autoModeStop" disabled>中止</button>
-        <label for = "speedInput">速さ</label>
-        <input type = "range" id = "speedInput" name = "speedInput" min = "0" max = "10">
-        <span id = "speedDesc"></span>
-      </div>
-      <div>
-        <label>手動モード用→</label>
+        <label>手動モード用　</label>
         <button id = "preparePop">母集団を準備</button>
         <button id = "drawButton" disabled>標本を選ぶ、そしてグラフに点を描く</button>
         <label for = "ssizeInput">標本サイズ</label>
-        <input type = "range" id = "ssizeInput" name = "ssizeInput" min = "1" max = "50">
         <span id = "ssizeDesc"></span>
+        <input type = "range" id = "ssizeInput" name = "ssizeInput" min = "1" max = "50">
       </div>
-      <div id = "msg"></div>
+
+      <div>
+        <label>自動モード用　</label>
+        <button id = "autoModeStart">自動モードで開始</button>
+        <button id = "autoModeStop" disabled>中止</button>
+        <label for = "speedInput">速さ</label>
+        <span id = "speedDesc"></span>
+        <input type = "range" id = "speedInput" name = "speedInput" min = "1" max = "10">
+      </div>
+
+      <div>
+        <button id = "clearButton">初期状態に戻す</button>
+      </div>
+
     </div>
 
     <div class="box-left">
-      <div id="popDesc">（母集団をここに並べる）</div>
-      <table class="pop-table" id="popTable"></table>
+      <div id="popDesc"></div>
+      <table class="persons-table" id="popTable"></table>
     </div>
 
     <div class="box-center">
-      <div id = "sampleDesc">（サンプルをここに並べる）</div>
-      <table class="pop-table" id="sampleTable"></table>
+      <div id = "sampleDesc"></div>
+      <table class="persons-table" id="sampleTable"></table>
     </div>
 
     <div class="box-right">
       <div></div>
-      <canvas id = "canv" width = "440" height = "400"></canvas>
+      <canvas id = "canv" width = "440" height = "388"></canvas>
     </div>
 
   </div>
 
+  <div class = "footer">
+    On-Browser Sampling Simulator  Ver. 2022-07-07 -- Copyright (C) 2022 Koji Yamamoto 
+   </div>
+
+
 </body>
 
 <script>
-  let autoModeStartButton = document.getElementById( "autoModeStart");
-  let autoModeStopButton = document.getElementById( "autoModeStop");
+
+  // GUI要素とJS変数の関連付け
+
+  let msg = document.getElementById( "msg");
+
+  let clearButton = document.getElementById( "clearButton");
 
   let preparePopButton = document.getElementById( "preparePop");
   let drawButton = document.getElementById( "drawButton");
+
+  let autoModeStartButton = document.getElementById( "autoModeStart");
+  let autoModeStopButton = document.getElementById( "autoModeStop");
 
   let speedInput = document.getElementById( "speedInput");
   let speedDesc = document.getElementById( "speedDesc");
@@ -156,20 +185,53 @@ TODO
 
   let canvId = document.getElementById( "canv");
 
-  let msg = document.getElementById( "msg");
-
 </script>
+
+<script src = "popdata.js"></script>
 <script src = "datahandle.js"></script>
 <script src = "graph.js"></script>
 <script>
 
+  let interval = getIntervalToWait();
+  let stopped = false;
+
   // 初期処理
-  speedInput.value = 0;
-  speedDesc.textContent = String( speedInput.value);
-  ssizeInput.value = 5;
-  ssizeDesc.textContent = String( ssizeInput.value);
-  graphObj.clear();
-  graphObj.drawBackground();  
+  function init()
+  {
+
+    // 以前の結果を消去
+    resultVec = [];
+
+    ssizeInput.value = 1;
+    ssizeDesc.textContent = String( ssizeInput.value);
+    speedInput.value = 1;
+    speedDesc.textContent = String( speedInput.value);
+    graphObj.clear();
+    graphObj.drawBackground();  
+
+    msg.innerHTML = "サンプリングをします。";
+
+    popDesc.innerHTML = "（母集団がここに表示されます）";
+    popTable.innerHTML = "";
+    sampleDesc.innerHTML = "（標本がここに表示されます）";
+    sampleTable.innerHTML = "";
+
+    // 手動モードのGUI部品の有効／無効
+    preparePopButton.disabled = false;
+    drawButton.disabled = true; 
+    ssizeInput.disabled = false; 
+        
+    // 自動モードのGUI部品の有効／無効
+    autoModeStartButton.disabled = false;
+    autoModeStopButton.disabled = true;
+    speedInput.disabled = false;     
+
+    interval = getIntervalToWait();
+    stopped = false;
+
+  }
+
+  init();
 
   ssizeInput.addEventListener(
     "change",
@@ -182,7 +244,7 @@ TODO
   {
     readPopData();
     popTable.innerHTML = getPopTable();
-    popDesc.innerHTML = "母集団データを読み込みました。<br>点数の平均値は " + getPopScoreMean() +" です。";
+    popDesc.innerHTML = "母集団は次のとおりです。<br>点数の平均値は " + getPopScoreMean() +" です。";
     drawButton.disabled = false;
   }
 
@@ -213,7 +275,7 @@ TODO
     ssizeDesc.textContent = ssizeInput.value;
 
     sampleTable.innerHTML = getSampleTable( ssize0);
-    sampleDesc.innerHTML = "標本を選びました。<br>点数の平均値は " + ( getSampleScoreMean().toFixed( 2)) +" です。";
+    sampleDesc.innerHTML = "選ばれた標本は次のとおりです。<br>点数の平均値は " + ( getSampleScoreMean().toFixed( 2)) +" です。";
     graphObj.redrawGraph();
 
   }
@@ -228,20 +290,24 @@ TODO
   );
 
 
-  let interval = 50 * ( 10 - speedInput.value);
-  let stopped = false;
+  function getIntervalToWait()
+  {
+    return ( 10 - speedInput.value) / 9 * 500;
+  }
+
   async function autoModeStart()
   {
+
+    init();
 
     msg.innerHTML = "自動モードでスタートしました。ストップするには中止ボタンを押してください。";
 
     stopped = false;
-    
-    // 以前の結果を消去
-    resultVec = [];
-    graphObj.clear();
 
     preparePop();
+
+    // クリアボタンの有効／無効
+    clearButton.disabled = true;
 
     // 手動モードのGUI部品の有効／無効
     preparePopButton.disabled = true;
@@ -255,7 +321,7 @@ TODO
     let popSize = popPersons.length;
     for ( let i = 0; i < ndraw; ++i){
 
-      msg.innerHTML = "ただいま" + String( i + 1) + "回目のサンプリング中...";
+      msg.innerHTML = "10回中、ただいま" + String( i + 1) + "回目のサンプリング中...";
 
       for ( let ss0 = 1; ss0 <= popSize; ++ss0){
         await sleep( interval);
@@ -270,6 +336,9 @@ TODO
       }
 
     }
+
+    // クリアボタンの有効／無効
+    clearButton.disabled = false;
 
     // 手動モードのGUI部品の有効／無効
     preparePopButton.disabled = false;
@@ -295,6 +364,9 @@ TODO
 
       stopped = true;
 
+      // クリアボタンの有効／無効
+      clearButton.disabled = false;
+
       // 手動モードのGUI部品の有効／無効
       preparePopButton.disabled = false;
       drawButton.disabled = false; 
@@ -313,8 +385,12 @@ TODO
     "change",
     () => {
       speedDesc.textContent = String( speedInput.value);
-      interval = 50 * ( 10 - speedInput.value);
+      interval = getIntervalToWait();
     }
+  );
+
+  clearButton.addEventListener(
+    "click", init
   );
 
 
