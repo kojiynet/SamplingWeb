@@ -4,6 +4,8 @@
 
 datahandle.js
 
+Before reading this file, read "popdata.js"
+
 Defined in this file...
 
 Classes:

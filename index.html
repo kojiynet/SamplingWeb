@@ -3,9 +3,13 @@
 On-Browser Sampler
 Copyriht (C) 2022 Koji Yamamoto 
 TODO:
-グラフの目盛線の間隔を汎用のアルゴリズムに。
+このHTML内のスクリプトを見直す。
+favionをつくる。。
+
+
+グラフの目盛線の間隔を汎用のアルゴリズムに？
 自動モードと手動モードのセレクタとなるラジオボタン？
-サンプリングの際にランダムネスをルーレットで表示。
+サンプリングの際にランダムネスをルーレットで表示？
 -->
 
 <!DOCTYPE html>
@@ -21,16 +25,13 @@ TODO:
 
       div {
         font-size: 12px;
-        /*
-        margin: 5px;
-        */
       }
 
       .footer {
         font-size: 8px;
       }
 
-      /* for population table */
+      /* for member table */
       .persons-table {
         table-layout: fixed;
         background: #ddd;
@@ -158,9 +159,8 @@ TODO:
 
 </body>
 
+<!-- GUI要素とJS変数の関連付け -->
 <script>
-
-  // GUI要素とJS変数の関連付け
 
   let msg = document.getElementById( "msg");
 
@@ -187,9 +187,16 @@ TODO:
 
 </script>
 
+<!-- データを読む -->
 <script src = "popdata.js"></script>
+
+<!-- データ処理モジュールを読む -->
 <script src = "datahandle.js"></script>
+
+<!-- グラフ描画モジュールを読む -->
 <script src = "graph.js"></script>
+
+<!-- イベント処理を定義 -->
 <script>
 
   let interval = getIntervalToWait();

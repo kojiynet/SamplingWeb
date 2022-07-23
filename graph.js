@@ -1,9 +1,24 @@
 ﻿'use strict'
 
+/*
+graph.js
+
+すでにcanvIdが定義されている必要がある。
+すでにresultVecが定義されている必要がある。
+
+Defined in this file...
+
+class CanvTrans
+class GraphType
+Global Variables:
+  graphObj
+*/
+
+
 // Canvas Point Transformer
 class CanvTrans {
 
-  // グラフ内座標をmath、HTMLでの座標をscreenとする。
+  // グラフ内の理論座標をmath、HTMLでの座標をscreenとする。
 
   constructor( scx1, scy1, scx2, scy2, mx1, my1, mx2, my2)
   {
@@ -22,23 +37,26 @@ class CanvTrans {
     this.mathw = this.mathx2 - this.mathx1;
     this.mathh = this.mathy2 - this.mathy1;
 
-    this.xTransRate = this.screenw / this.mathw; // x座標のmathでの1がscreenでのいくつか
-    this.yTransRate = this.screenh / this.mathh; // y座標のmathでの1がscreenでのいくつか
+    this.xTransRate = this.screenw / this.mathw; // x座標のmathでの間隔1がscreenでのいくつか
+    this.yTransRate = this.screenh / this.mathh; // y座標のmathでの間隔1がscreenでのいくつか
 
   }
 
+  // Mathのx座標をScreenの値に変換する。
   xMathToScreen( mX)
   {
     let retx = this.screenx1 + ( mX - this.mathx1) * this.xTransRate;
     return retx;
   }
 
+  // Mathのy座標をScreenの値に変換する。
   yMathToScreen( mY)
   {
     let rety = this.screeny1 + ( this.mathy2 - mY) * this.yTransRate;
     return rety;
   }
 
+  // Mathの(x,y)座標をScreenの値に変換する。
   // リストで返す。
   mathToScreen( mX, mY)
   {
@@ -47,7 +65,7 @@ class CanvTrans {
 
 };
 
-
+// Graph-drawing Class
 class GraphType {
 
   constructor()
@@ -57,15 +75,21 @@ class GraphType {
 
     this.canvasW = canvId.getAttribute( "width");
     this.canvasH = canvId.getAttribute( "height");
-    this.screenx1 = 50;
-    this.screeny1 = 50;
-    this.screenx2 = this.canvasW - 10;
-    this.screeny2 = this.canvasH - 40;
 
+    this.screenx1 = 50; // canvasのうち、左側50は余白
+    this.screeny1 = 50; // canvasのうち、上側50は余白
+    this.screenx2 = this.canvasW - 10; // canvasのうち、右側50は余白
+    this.screeny2 = this.canvasH - 40; // canvasのうち、下側50は余白
+
+    // 理論座標系の範囲
     this.mathx1 = 0;
     this.mathy1 = 40;
     this.mathx2 = 50;
     this.mathy2 = 80;
+
+    // x方向とy方向の目盛の間隔
+    this.xstep = 5;
+    this.ystep = 5;
 
     this.ct = new CanvTrans(
       this.screenx1, this.screeny1, this.screenx2, this.screeny2,
@@ -76,9 +100,7 @@ class GraphType {
 
   clear()
   {
-
     this.drawCon.clearRect( 0, 0, this.canvasW, this.canvasH);
-
   }
 
   drawBackground()
@@ -95,18 +117,20 @@ class GraphType {
     let mathy1 = this.mathy1;
     let mathx2 = this.mathx2;
     let mathy2 = this.mathy2;
+    let xstep = this.xstep;
+    let ystep = this.ystep;
     let ct = this.ct;
     
     // タイトル描画
-    drawCon.textAlign = "center"; // 指定x座標はテキストの左右方向の中心を指す、ように（？）
-    drawCon.textBaseline = "top"; // 指定y座標はテキストの上部を指す、ように（？）
+    drawCon.textAlign = "center"; // 指定x座標がテキストの左右方向の中心を指すことになる（はず）
+    drawCon.textBaseline = "top"; // 指定y座標がテキストの上部を指すことになる（はず）
     drawCon.font = "15pt Arial";
     drawCon.fillStyle = "rgb(0,0,0)";
     drawCon.fillText( "標本サイズと標本平均", ( canvasW / 2), 5); 
 
     // x軸描画
-    drawCon.textAlign = "center"; // 指定x座標はテキストの左右方向の中心を指す、ように（？）
-    drawCon.textBaseline = "top"; // 指定y座標はテキストの上部を指す、ように（？）
+    drawCon.textAlign = "center"; // 指定x座標がテキストの左右方向の中心を指すことになる（はず）
+    drawCon.textBaseline = "top"; // 指定y座標がテキストの上部を指すことになる（はず）
     drawCon.font = "12pt Arial";
     drawCon.fillStyle = "rgb(0,0,0)";
     drawCon.strokeStyle = "rgb(0,0,0)";
@@ -118,7 +142,8 @@ class GraphType {
     drawCon.lineTo( screenx2, screeny2);
     drawCon.stroke();
     
-    for ( let x = mathx1; x <= mathx2; x += 5){
+    // x方向の目盛の描画
+    for ( let x = mathx1; x <= mathx2; x += xstep){
       
       let scx = ct.xMathToScreen( x);
       
@@ -138,25 +163,25 @@ class GraphType {
     }
 
     // y軸描画
-    drawCon.textAlign = "center"; // 指定x座標はテキストの左右方向の中心を指す、ように（？）
-    drawCon.textBaseline = "top"; // 指定y座標はテキストの上部を指す、ように（？）
+    drawCon.textAlign = "center"; // 指定x座標がテキストの左右方向の中心を指すことになる（はず）
+    drawCon.textBaseline = "top"; // 指定y座標がテキストの上部を指すことになる（はず）
     drawCon.font = "12pt Arial";
     drawCon.fillStyle = "rgb(0,0,0)";
     drawCon.strokeStyle = "rgb(0,0,0)";
 
     drawCon.rotate( -0.5 * Math.PI); // 座標系を回転
     drawCon.fillText( "標本平均", -1 * canvasH / 2, 5);
-    drawCon.rotate( 0.5 * Math.PI); // 座標系を回転（戻す）
+    drawCon.rotate(  0.5 * Math.PI); // 座標系を回転（戻す）
 
     drawCon.beginPath();
     drawCon.moveTo( screenx1, screeny1);
     drawCon.lineTo( screenx1, screeny2);
     drawCon.stroke();
-    
-    drawCon.textAlign = "end";
-    drawCon.textBaseline = "middle";
 
-    for ( let y = mathy1; y <= mathy2; y += 5){
+    // y方向の目盛の描画
+    drawCon.textAlign = "end"; // 指定x座標がテキストの終端位置を指すことになる（はず）
+    drawCon.textBaseline = "middle";  // 指定y座標がテキストの上下方向の中心を指すことになる（はず）
+    for ( let y = mathy1; y <= mathy2; y += ystep){
 
       let scy = ct.yMathToScreen( y);
 
@@ -176,21 +201,24 @@ class GraphType {
 
   }
 
+  // 1つだけデータ点を描画
   drawSinglePoint( ss, sm, colorstr)
   {
 
     let x = this.ct.xMathToScreen( ss); 
     let y = this.ct.yMathToScreen( sm);
     this.drawCon.strokeStyle = colorstr; 
-    //drawCon.fillStyle = "rgb(20,20,200)";
+    //this.drawCon.fillStyle = "rgb(20,20,200)";
     this.drawCon.beginPath();
-    this.drawCon.ellipse( x, y, 4, 4, 0, 0, Math.PI * 2);
+    this.drawCon.ellipse( x, y, 4, 4, 0, 0, Math.PI * 2); // 半径が4の円
     this.drawCon.stroke();
-    //drawCon.fill();
+    //this.drawCon.fill();
 
   }
 
   // データ点をすべて描画
+  // 最後の点の色をcolorstrLastで指定する。
+  // それ以外の点の色をcolorstrで指定する。
   drawSamplePoints( colorstr = "blue", colorstrLast = "red")
   {
 
@@ -211,6 +239,7 @@ class GraphType {
 
   }
 
+  // グラフをクリアして再描画する。
   redrawGraph()
   {
 
