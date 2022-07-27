@@ -3,9 +3,7 @@
 On-Browser Sampler
 Copyriht (C) 2022 Koji Yamamoto 
 TODO:
-このHTML内のスクリプトを見直す。
 favionをつくる。。
-
 
 グラフの目盛線の間隔を汎用のアルゴリズムに？
 自動モードと手動モードのセレクタとなるラジオボタン？
@@ -13,10 +11,10 @@ favionをつくる。。
 -->
 
 <!DOCTYPE html>
-<html lang="ja">
+<html lang = "ja">
 <head>
-  <meta charset="UTF-8">
-  <title>On-Browser Sampling Simulator</title>
+  <meta charset = "UTF-8">
+  <title>On-Browser Sampling Simulator "kosasi"</title>
   <style>
 
       button {
@@ -83,38 +81,25 @@ favionをつくる。。
       }
 
       canvas {
-        display:block;
-        background:#fff;
-        margin:5px;
+        display: block;
+        background: #fff;
+        margin: 5px;
       }
-
-
-      @media ( max-width: 800px){ 
-        .main-container {
-          grid-template-columns: 1fr;
-          grid-template-rows: auto;
-        }
-        .box-top, .box-left, .box-center, .box-right {
-          grid-column: 1;
-          grid-row: auto;
-        }
-      }
-      
 
   </style>
 </head>
 <body>
 
-  <div class="main-container">
+  <div class = "main-container">
 
-    <div class="box-top">
+    <div class = "box-top">
 
       <div id = "msg"></div>
 
       <div>
         <label>手動モード用　</label>
-        <button id = "preparePop">母集団を準備</button>
-        <button id = "drawButton" disabled>標本を選ぶ、そしてグラフに点を描く</button>
+        <button id = "preparePopButton">母集団を準備</button>
+        <button id = "drawSampleButton" disabled>標本を選ぶ、そしてグラフに点を描く</button>
         <label for = "ssizeInput">標本サイズ</label>
         <span id = "ssizeDesc"></span>
         <input type = "range" id = "ssizeInput" name = "ssizeInput" min = "1" max = "50">
@@ -122,8 +107,8 @@ favionをつくる。。
 
       <div>
         <label>自動モード用　</label>
-        <button id = "autoModeStart">自動モードで開始</button>
-        <button id = "autoModeStop" disabled>中止</button>
+        <button id = "autoModeStartButton">自動モードで開始</button>
+        <button id = "autoModeStopButton" disabled>中止</button>
         <label for = "speedInput">速さ</label>
         <span id = "speedDesc"></span>
         <input type = "range" id = "speedInput" name = "speedInput" min = "1" max = "10">
@@ -135,27 +120,25 @@ favionをつくる。。
 
     </div>
 
-    <div class="box-left">
-      <div id="popDesc"></div>
-      <table class="persons-table" id="popTable"></table>
+    <div class = "box-left">
+      <div id = "popDesc"></div>
+      <table class = "persons-table" id = "popTable"></table>
     </div>
 
-    <div class="box-center">
+    <div class = "box-center">
       <div id = "sampleDesc"></div>
-      <table class="persons-table" id="sampleTable"></table>
+      <table class = "persons-table" id = "sampleTable"></table>
     </div>
 
-    <div class="box-right">
-      <div></div>
+    <div class = "box-right">
       <canvas id = "canv" width = "440" height = "388"></canvas>
     </div>
 
   </div>
 
   <div class = "footer">
-    On-Browser Sampling Simulator  Ver. 2022-07-07 -- Copyright (C) 2022 Koji Yamamoto 
+    On-Browser Sampling Simulator "kosasi" Ver. 2022-07-27 -- Copyright (C) 2022 Koji Yamamoto 
    </div>
-
 
 </body>
 
@@ -166,22 +149,23 @@ favionをつくる。。
 
   let clearButton = document.getElementById( "clearButton");
 
-  let preparePopButton = document.getElementById( "preparePop");
-  let drawButton = document.getElementById( "drawButton");
+  let preparePopButton = document.getElementById( "preparePopButton");
+  let drawSampleButton = document.getElementById( "drawSampleButton");
 
-  let autoModeStartButton = document.getElementById( "autoModeStart");
-  let autoModeStopButton = document.getElementById( "autoModeStop");
+  let ssizeInput = document.getElementById( "ssizeInput");
+  let ssizeDesc = document.getElementById( "ssizeDesc");
+
+  let autoModeStartButton = document.getElementById( "autoModeStartButton");
+  let autoModeStopButton = document.getElementById( "autoModeStopButton");
 
   let speedInput = document.getElementById( "speedInput");
   let speedDesc = document.getElementById( "speedDesc");
 
   let popDesc = document.getElementById( "popDesc");
   let popTable = document.getElementById( "popTable");
+
   let sampleDesc = document.getElementById( "sampleDesc");
   let sampleTable = document.getElementById( "sampleTable");
-
-  let ssizeInput = document.getElementById( "ssizeInput");
-  let ssizeDesc = document.getElementById( "ssizeDesc");
 
   let canvId = document.getElementById( "canv");
 
@@ -199,25 +183,31 @@ favionをつくる。。
 <!-- イベント処理を定義 -->
 <script>
 
-  let interval = getIntervalToWait();
-  let stopped = false;
+  // 自動モード時に処理の間に待つ時間
+  let interval;
 
-  // 初期処理
+  // 自動モード時に停止ボタンが押されたことを示すフラグ
+  let stopped;
+
+  // 初期状態にする。
   function init()
   {
 
-    // 以前の結果を消去
+    // 以前のサンプリングの結果を消去
     resultVec = [];
 
+    // 標本サイズと速さを初期値にする。
     ssizeInput.value = 1;
     ssizeDesc.textContent = String( ssizeInput.value);
     speedInput.value = 1;
     speedDesc.textContent = String( speedInput.value);
+
+    // グラフを初期化する。
     graphObj.clear();
     graphObj.drawBackground();  
 
+    // 表示の初期設定
     msg.innerHTML = "サンプリングをします。";
-
     popDesc.innerHTML = "（母集団がここに表示されます）";
     popTable.innerHTML = "";
     sampleDesc.innerHTML = "（標本がここに表示されます）";
@@ -225,13 +215,16 @@ favionをつくる。。
 
     // 手動モードのGUI部品の有効／無効
     preparePopButton.disabled = false;
-    drawButton.disabled = true; 
+    drawSampleButton.disabled = true; 
     ssizeInput.disabled = false; 
         
     // 自動モードのGUI部品の有効／無効
     autoModeStartButton.disabled = false;
     autoModeStopButton.disabled = true;
-    speedInput.disabled = false;     
+    speedInput.disabled = false;
+
+    // クリアボタンは有効
+    clearButton.disabled = false;
 
     interval = getIntervalToWait();
     stopped = false;
@@ -240,6 +233,7 @@ favionをつくる。。
 
   init();
 
+  // 標本サイズのスライダを変化させたときに、表示される数値も変える。
   ssizeInput.addEventListener(
     "change",
     () => {
@@ -247,19 +241,21 @@ favionをつくる。。
     }
   );
 
+  // 母集団を準備する。
   function preparePop()
   {
     readPopData();
     popTable.innerHTML = getPopTable();
     popDesc.innerHTML = "母集団は次のとおりです。<br>点数の平均値は " + getPopScoreMean() +" です。";
-    drawButton.disabled = false;
+    drawSampleButton.disabled = false;
   }
 
+  // 母集団を準備するボタンが押されたら、母集団を準備する。
   preparePopButton.addEventListener(
     "click", preparePop
   );
 
-  // sleep for dur millisec
+  // sleep for <dur> millisec
   // use like "await sleep( 1000);" in "async" function
   function sleep( dur) {
     return new Promise(
@@ -269,6 +265,7 @@ favionをつくる。。
     );
   }
 
+  // 標本サイズssize0の標本を得る。
   function drawSampleOfSize( ssize0)
   {
 
@@ -277,7 +274,8 @@ favionをつくる。。
       return;
     }
 
-    // 標本サイズがスライダーと異なっている場合に、スライダーの方を合わせる。
+    // 標本サイズがスライダーと異なっている場合は、スライダーの方を指定サイズに合わせる。
+    // （自動モードの際に機能する）
     ssizeInput.value = ssize0;
     ssizeDesc.textContent = ssizeInput.value;
 
@@ -287,21 +285,21 @@ favionをつくる。。
 
   }
 
-  function drawSample()
-  {
-    drawSampleOfSize( ssizeInput.value);
-  }
-
-  drawButton.addEventListener(
-    "click", drawSample
+  // 手動モードでの抽出ボタンの処理
+  drawSampleButton.addEventListener(
+    "click", 
+    () => {
+      drawSampleOfSize( ssizeInput.value);
+    }
   );
 
-
+  // 自動モード時の「速さ」を待ち時間に変換
   function getIntervalToWait()
   {
     return ( 10 - speedInput.value) / 9 * 500;
   }
 
+  // 自動モードのスタート
   async function autoModeStart()
   {
 
@@ -313,16 +311,18 @@ favionをつくる。。
 
     preparePop();
 
-    // クリアボタンの有効／無効
+    // クリアボタンは無効に
     clearButton.disabled = true;
 
     // 手動モードのGUI部品の有効／無効
     preparePopButton.disabled = true;
-    drawButton.disabled = true;
+    drawSampleButton.disabled = true;
     ssizeInput.disabled = true;
 
     // 自動モードのGUI部品の有効／無効
+    autoModeStartButton.disabled = true;
     autoModeStopButton.disabled = false;
+    speedInput.disabled = false;
 
     let ndraw = 10;
     let popSize = popPersons.length;
@@ -344,16 +344,18 @@ favionをつくる。。
 
     }
 
-    // クリアボタンの有効／無効
+    // クリアボタンを有効に
     clearButton.disabled = false;
 
-    // 手動モードのGUI部品の有効／無効
+    // 手動モードのGUI部品を有効に
     preparePopButton.disabled = false;
-    drawButton.disabled = false;
+    drawSampleButton.disabled = false;
     ssizeInput.disabled = false;
 
     // 自動モードのGUI部品の有効／無効
+    autoModeStartButton.disabled = false;
     autoModeStopButton.disabled = true;
+    speedInput.disabled = false;
 
     if ( stopped == false){
       msg.innerHTML = "自動モードが終了しました。";
@@ -361,33 +363,21 @@ favionをつくる。。
 
   }
 
+  // 自動モードのスタートボタンに関連付け
   autoModeStartButton.addEventListener(
     "click", autoModeStart
   );
 
+  // 自動モードの停止ボタンのイベント
   autoModeStopButton.addEventListener(
     "click",
     () => {
-
       stopped = true;
-
-      // クリアボタンの有効／無効
-      clearButton.disabled = false;
-
-      // 手動モードのGUI部品の有効／無効
-      preparePopButton.disabled = false;
-      drawButton.disabled = false; 
-      ssizeInput.disabled = false; 
-          
-      // 自動モードのGUI部品の有効／無効
-      autoModeStopButton.disabled = true;
-      speedInput.disabled = false; 
-
       msg.innerHTML = "中止しました。";
-
     }
   );
 
+  // 速さのスライダーのイベント
   speedInput.addEventListener(
     "change",
     () => {
@@ -396,10 +386,10 @@ favionをつくる。。
     }
   );
 
+  // クリアボタンのイベント
   clearButton.addEventListener(
     "click", init
   );
-
 
 </script>
 
