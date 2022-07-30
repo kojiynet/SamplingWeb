@@ -1,20 +1,30 @@
 ﻿
 <!--
-On-Browser Sampler
-Copyriht (C) 2022 Koji Yamamoto 
-TODO:
-favionをつくる。。
+kospaco
+On-Browser Spatial Competition Simulator 
+Copyright (C) 2022 Koji Yamamoto 
 
-グラフの目盛線の間隔を汎用のアルゴリズムに？
-自動モードと手動モードのセレクタとなるラジオボタン？
-サンプリングの際にランダムネスをルーレットで表示？
+以下を変えられるように？
+・正規分布か一様分布か
+・疎外による棄権を設定するか
+・確率的な投票にするか
+
 -->
 
 <!DOCTYPE html>
 <html lang = "ja">
+
+<!-- version info -->
+<script>
+  let verinfo = "2022-07-30"
+</script>
+
 <head>
+
   <meta charset = "UTF-8">
-  <title>On-Browser Sampling Simulator "kosasi"</title>
+
+  <title>On-Browser Spatial Competition Simulator "kospaco"</title>
+
   <style>
 
       button {
@@ -24,121 +34,90 @@ favionをつくる。。
       div {
         font-size: 12px;
       }
-
+      
       .footer {
         font-size: 8px;
       }
 
-      /* for member table */
-      .persons-table {
-        table-layout: fixed;
-        background: #ddd;
-      }
-
-      .persons-table td {
-        width: 60px; /* 5列並べるとgridの幅にぴったり */
-        background: #ccc;
-      }
-
-      .table-name {
-        font-size: 11px;
-      }
-
-      .table-score {
-        font-size: 11px;
-      }
-
-      /* 2 * 3 box-grid layout */
+      /* 2 * 2 box-grid layout */
       .main-container {
         display: grid;
         gap: 10px;
-        grid-template-columns: 322px 322px 450px; 
+        grid-template-columns: auto auto; 
         grid-template-rows: auto auto;
       }
 
-      .box-top {
-        grid-column: 1 / 4;
+      .box-top-left {
+        grid-column: 1 / 2;
         grid-row: 1 / 2;
         background: #fc2;
       }
 
-      .box-left {
+      .box-top-right {
+        grid-column: 2 / 3;
+        grid-row: 1 / 2;
+        background: #f22;
+      }
+
+      .box-bottom-left {
         grid-column: 1 / 2; 
         grid-row: 2 / 3;
         background: #2f2;
       }
 
-      .box-center {
-        grid-column: 2 / 3; 
-        grid-row: 2 / 3;
-        background: #2fc;
-      }
-
-      .box-right {
-        grid-column: 3 / 4;
-        grid-row: 2 / 3;
-        background: #c2f;
-      }
-
-      canvas {
-        display: block;
-        background: #fff;
-        margin: 5px;
-      }
-
   </style>
+
 </head>
+
 <body>
 
   <div class = "main-container">
 
-    <div class = "box-top">
+    <div class = "box-top-left">
 
-      <div id = "msg"></div>
+      <div id = "msg">（空間競争シミュレーション）</div>
 
       <div>
-        <label>手動モード用　</label>
-        <button id = "preparePopButton">母集団を準備</button>
+
+        <label>手動モード用？　</label>
+
+        <button id = "setupButton">準備（というか点を描く）</button>
+
+        <button id = "onestepButton">1ステップ進める</button>
+
+        <button id = "initButton">初期状態に戻す</button>
+
+      </div>
+
+    </div>
+
+      <div class = "box-top-right">
+        
         <button id = "drawSampleButton" disabled>標本を選ぶ、そしてグラフに点を描く</button>
         <label for = "ssizeInput">標本サイズ</label>
         <span id = "ssizeDesc"></span>
-        <input type = "range" id = "ssizeInput" name = "ssizeInput" min = "1" max = "50">
+        <input type = "range" id = "ssizeInput" name = "ssizeInput" min = "1" max = "50" disabled>
+
+        <div>
+          <label>自動モード用　</label>
+          <button id = "autoModeStartButton" disabled>自動モードで開始</button>
+          <button id = "autoModeStopButton" disabled>中止</button>
+          <label for = "speedInput">速さ</label>
+          <span id = "speedDesc"></span>
+          <input type = "range" id = "speedInput" name = "speedInput" min = "1" max = "10" disabled>
+        </div>
+
       </div>
 
-      <div>
-        <label>自動モード用　</label>
-        <button id = "autoModeStartButton">自動モードで開始</button>
-        <button id = "autoModeStopButton" disabled>中止</button>
-        <label for = "speedInput">速さ</label>
-        <span id = "speedDesc"></span>
-        <input type = "range" id = "speedInput" name = "speedInput" min = "1" max = "10">
-      </div>
 
-      <div>
-        <button id = "clearButton">初期状態に戻す</button>
-      </div>
-
-    </div>
-
-    <div class = "box-left">
-      <div id = "popDesc"></div>
-      <table class = "persons-table" id = "popTable"></table>
-    </div>
-
-    <div class = "box-center">
-      <div id = "sampleDesc"></div>
-      <table class = "persons-table" id = "sampleTable"></table>
-    </div>
-
-    <div class = "box-right">
-      <canvas id = "canv" width = "440" height = "388"></canvas>
+    <div class = "box-bottom-left">
+      <svg id = "svgcanv" width = "400" height = "400">
+      </svg>
     </div>
 
   </div>
 
-  <div class = "footer">
-    On-Browser Sampling Simulator "kosasi" Ver. 2022-07-27 -- Copyright (C) 2022 Koji Yamamoto 
-   </div>
+  <div class = "footer" id = "footer"></div>
 
 </body>
 
@@ -147,249 +126,81 @@ favionをつくる。。
 
   let msg = document.getElementById( "msg");
 
-  let clearButton = document.getElementById( "clearButton");
+  let setupButton = document.getElementById( "setupButton");
 
-  let preparePopButton = document.getElementById( "preparePopButton");
-  let drawSampleButton = document.getElementById( "drawSampleButton");
+  let onestepButton = document.getElementById( "onestepButton");
 
-  let ssizeInput = document.getElementById( "ssizeInput");
-  let ssizeDesc = document.getElementById( "ssizeDesc");
+  let initButton = document.getElementById( "initButton");
 
-  let autoModeStartButton = document.getElementById( "autoModeStartButton");
-  let autoModeStopButton = document.getElementById( "autoModeStopButton");
+  let svgcanv = document.getElementById( "svgcanv");
 
-  let speedInput = document.getElementById( "speedInput");
-  let speedDesc = document.getElementById( "speedDesc");
-
-  let popDesc = document.getElementById( "popDesc");
-  let popTable = document.getElementById( "popTable");
-
-  let sampleDesc = document.getElementById( "sampleDesc");
-  let sampleTable = document.getElementById( "sampleTable");
-
-  let canvId = document.getElementById( "canv");
+  let footer = document.getElementById( "footer");
 
 </script>
 
-<!-- データを読む -->
-<script src = "popdata.js"></script>
+<!-- 外部スクリプト -->
+<script src = "kutil.js"></script>
+<script src = "svggraph.js"></script>
+<script src = "voter.js"></script>
+<script src = "party.js"></script>
+<script src = "simulate.js"></script>
 
-<!-- データ処理モジュールを読む -->
-<script src = "datahandle.js"></script>
-
-<!-- グラフ描画モジュールを読む -->
-<script src = "graph.js"></script>
-
-<!-- イベント処理を定義 -->
+<!-- 初期処理 -->
 <script>
 
-  // 自動モード時に処理の間に待つ時間
-  let interval;
+  footer.innerText = 'On-Browser Spatial Competition Simulator "kospaco" Ver. ' + verinfo + ' -- Copyright (C) 2022 Koji Yamamoto'; 
 
-  // 自動モード時に停止ボタンが押されたことを示すフラグ
-  let stopped;
+  svggraphobj.clear();
+  svggraphobj.drawBackground();
 
-  // 初期状態にする。
-  function init()
-  {
+</script>
 
-    // 以前のサンプリングの結果を消去
-    resultVec = [];
+<!-- イベント定義 -->
+<script>
 
-    // 標本サイズと速さを初期値にする。
-    ssizeInput.value = 1;
-    ssizeDesc.textContent = String( ssizeInput.value);
-    speedInput.value = 1;
-    speedDesc.textContent = String( speedInput.value);
-
-    // グラフを初期化する。
-    graphObj.clear();
-    graphObj.drawBackground();  
-
-    // 表示の初期設定
-    msg.innerHTML = "サンプリングをします。";
-    popDesc.innerHTML = "（母集団がここに表示されます）";
-    popTable.innerHTML = "";
-    sampleDesc.innerHTML = "（標本がここに表示されます）";
-    sampleTable.innerHTML = "";
-
-    // 手動モードのGUI部品の有効／無効
-    preparePopButton.disabled = false;
-    drawSampleButton.disabled = true; 
-    ssizeInput.disabled = false; 
-        
-    // 自動モードのGUI部品の有効／無効
-    autoModeStartButton.disabled = false;
-    autoModeStopButton.disabled = true;
-    speedInput.disabled = false;
-
-    // クリアボタンは有効
-    clearButton.disabled = false;
-
-    interval = getIntervalToWait();
-    stopped = false;
-
-  }
-
-  init();
-
-  // 標本サイズのスライダを変化させたときに、表示される数値も変える。
-  ssizeInput.addEventListener(
-    "change",
-    () => {
-      ssizeDesc.textContent = String( ssizeInput.value);
-    }
-  );
-
-  // 母集団を準備する。
-  function preparePop()
-  {
-    readPopData();
-    popTable.innerHTML = getPopTable();
-    popDesc.innerHTML = "母集団は次のとおりです。<br>点数の平均値は " + getPopScoreMean() +" です。";
-    drawSampleButton.disabled = false;
-  }
-
-  // 母集団を準備するボタンが押されたら、母集団を準備する。
-  preparePopButton.addEventListener(
-    "click", preparePop
-  );
-
-  // sleep for <dur> millisec
-  // use like "await sleep( 1000);" in "async" function
-  function sleep( dur) {
-    return new Promise(
-      ( resolve) => {
-        setTimeout( resolve, dur);
-      } 
-    );
-  }
-
-  // 標本サイズssize0の標本を得る。
-  function drawSampleOfSize( ssize0)
-  {
-
-    if ( popPersons.length < 1){
-      msg.innerHTML = "まず母集団を読み込んでください。";
-      return;
-    }
-
-    // 標本サイズがスライダーと異なっている場合は、スライダーの方を指定サイズに合わせる。
-    // （自動モードの際に機能する）
-    ssizeInput.value = ssize0;
-    ssizeDesc.textContent = ssizeInput.value;
-
-    sampleTable.innerHTML = getSampleTable( ssize0);
-    sampleDesc.innerHTML = "選ばれた標本は次のとおりです。<br>点数の平均値は " + ( getSampleScoreMean().toFixed( 2)) +" です。";
-    graphObj.redrawGraph();
-
-  }
-
-  // 手動モードでの抽出ボタンの処理
-  drawSampleButton.addEventListener(
-    "click", 
-    () => {
-      drawSampleOfSize( ssizeInput.value);
-    }
-  );
-
-  // 自動モード時の「速さ」を待ち時間に変換
-  function getIntervalToWait()
-  {
-    return ( 10 - speedInput.value) / 9 * 500;
-  }
-
-  // 自動モードのスタート
-  async function autoModeStart()
-  {
-
-    init();
-
-    msg.innerHTML = "自動モードでスタートしました。ストップするには中止ボタンを押してください。";
-
-    stopped = false;
-
-    preparePop();
-
-    // クリアボタンは無効に
-    clearButton.disabled = true;
-
-    // 手動モードのGUI部品の有効／無効
-    preparePopButton.disabled = true;
-    drawSampleButton.disabled = true;
-    ssizeInput.disabled = true;
-
-    // 自動モードのGUI部品の有効／無効
-    autoModeStartButton.disabled = true;
-    autoModeStopButton.disabled = false;
-    speedInput.disabled = false;
-
-    let ndraw = 10;
-    let popSize = popPersons.length;
-    for ( let i = 0; i < ndraw; ++i){
-
-      msg.innerHTML = "10回中、ただいま" + String( i + 1) + "回目のサンプリング中...";
-
-      for ( let ss0 = 1; ss0 <= popSize; ++ss0){
-        await sleep( interval);
-        if ( stopped == true){
-          break;
-        }
-        drawSampleOfSize( ss0);
-      }
-
-      if ( stopped == true){
-          break;
-      }
-
-    }
-
-    // クリアボタンを有効に
-    clearButton.disabled = false;
-
-    // 手動モードのGUI部品を有効に
-    preparePopButton.disabled = false;
-    drawSampleButton.disabled = false;
-    ssizeInput.disabled = false;
-
-    // 自動モードのGUI部品の有効／無効
-    autoModeStartButton.disabled = false;
-    autoModeStopButton.disabled = true;
-    speedInput.disabled = false;
-
-    if ( stopped == false){
-      msg.innerHTML = "自動モードが終了しました。";
-    }
-
-  }
-
-  // 自動モードのスタートボタンに関連付け
-  autoModeStartButton.addEventListener(
-    "click", autoModeStart
-  );
-
-  // 自動モードの停止ボタンのイベント
-  autoModeStopButton.addEventListener(
+  setupButton.addEventListener(
     "click",
     () => {
-      stopped = true;
-      msg.innerHTML = "中止しました。";
-    }
-  );
 
-  // 速さのスライダーのイベント
-  speedInput.addEventListener(
-    "change",
+      votergroup.createVoters( 1000);
+      votergroup.plot();
+
+      partygroup.createParties( 2);
+      partygroup.plot();
+
+      setupButton.disabled = true;
+
+    }
+  )
+
+  onestepButton.addEventListener(
+    "click",
     () => {
-      speedDesc.textContent = String( speedInput.value);
-      interval = getIntervalToWait();
-    }
-  );
 
-  // クリアボタンのイベント
-  clearButton.addEventListener(
-    "click", init
-  );
+      election();
+
+      msg.innerHTML = "第1政党の得票：" + partygroup.parties[ 0].vote + "　第2政党の得票：" + partygroup.parties[ 1].vote;
+      svggraphobj.clear();
+      svggraphobj.drawBackground();
+      votergroup.plot();
+      partygroup.plot();
+
+      partymove();
+
+    }
+  )
+
+  initButton.addEventListener(
+    "click",
+    () => {
+
+      svggraphobj.clear();
+      svggraphobj.drawBackground();
+
+      setupButton.disabled = false;
+
+    }
+  )
 
 </script>
 
